@@ -55,8 +55,8 @@ export class MonksBloodsplats {
             game.MonksBloodsplats = MonksBloodsplats;
 
         if (game.modules.get("lib-wrapper")?.active) {
-            libWrapper.ignore_conflicts("monks-bloodsplats", "smarttarget", "Token.prototype._canControl");
-            libWrapper.ignore_conflicts("monks-bloodsplats", "easy-target", "Token.prototype._canControl");
+            libWrapper.ignore_conflicts("monks-bloodsplats", "smarttarget", "foundry.canvas.placeables.Token.prototype._canControl");
+            libWrapper.ignore_conflicts("monks-bloodsplats", "easy-target", "foundry.canvas.placeables.Token.prototype._canControl");
         }
 
         MonksBloodsplats.canvasLoading = true;
@@ -70,21 +70,21 @@ export class MonksBloodsplats {
         MonksBloodsplats.image_list = setting("image-lists");
         MonksBloodsplats.blood_types = setting("blood-types");
 
-        patchFunc("Token.prototype._drawOverlay", async function (wrapper, ...args) {
+        patchFunc("foundry.canvas.placeables.Token.prototype._drawOverlay", async function (wrapper, ...args) {
             if (MonksBloodsplats.isDefeated(this) && this.actor?.type !== 'character') {
                 //this should be showing the bloodsplat, so don't show the skull overlay
                 return;
             } else
                 return wrapper(...args);
         }, "MIXED");
-        patchFunc("Token.prototype._drawBar", async function (wrapper, ...args) {
+        patchFunc("foundry.canvas.placeables.Token.prototype._drawBar", async function (wrapper, ...args) {
             if (MonksBloodsplats.isDefeated(this) && this.actor?.type !== 'character') {
                 //this should be showing the bloodsplat, so don't show the resource bars
                 return false;
             } else
                 return wrapper(...args);
         }, "MIXED");
-        patchFunc("Token.prototype._getTooltipText", function (wrapper, ...args) {
+        patchFunc("foundry.canvas.placeables.Token.prototype._getTooltipText", function (wrapper, ...args) {
             if (MonksBloodsplats.isDefeated(this) && this.actor?.type !== 'character') {
                 //this should be showing the bloodsplat, so don't show the tooltip
                 return "";
@@ -92,7 +92,7 @@ export class MonksBloodsplats {
                 return wrapper(...args);
         }, "MIXED");
         /*
-        patchFunc("Token.prototype._canControl", function (wrapper, ...args) {
+        patchFunc("foundry.canvas.placeables.Token.prototype._canControl", function (wrapper, ...args) {
             let [user, event] = args;
             if (setting("defeated-tokens-disabled") && setting("disabled-bloodsplats") && this.bloodsplat && game.combat?.active && game.combat?.started) {
                 return false;
@@ -100,7 +100,7 @@ export class MonksBloodsplats {
             return wrapper(...args);
         }, "MIXED");
 
-        patchFunc("Token.prototype._canHover", function (wrapper, ...args) {
+        patchFunc("foundry.canvas.placeables.Token.prototype._canHover", function (wrapper, ...args) {
             let [user, event] = args;
             if (setting("defeated-tokens-disabled") && setting("disabled-bloodsplats") && this.bloodsplat && game.combat?.active && game.combat?.started) {
                 return false;
@@ -109,7 +109,7 @@ export class MonksBloodsplats {
         }, "MIXED");
         */
 
-        patchFunc("Token.prototype._refreshMesh", function (wrapper, ...args) {
+        patchFunc("foundry.canvas.placeables.Token.prototype._refreshMesh", function (wrapper, ...args) {
             let result = wrapper(...args);
 
             if (MonksBloodsplats.isDefeated(this) && this.object?.type !== 'character') {
@@ -121,11 +121,6 @@ export class MonksBloodsplats {
         });
     }
 
-    static ready() {
-        if (game.user.isGM && !setting("transfer-settings") && game.modules.get("monks-little-details")?.active) {
-            MonksBloodsplats.transferSettings();
-        }
-    }
 
     static getBloodType(token) {
         let types = [];
@@ -150,11 +145,11 @@ export class MonksBloodsplats {
             for (let type of types) {
                 if (MonksBloodsplats.blood_types[type]) {
                     let typeData = MonksBloodsplats.blood_types[type];
-                    if (typeData.type && bloodType.type == undefined)
+                    if (typeData.type && !bloodType.type)
                         bloodType.type = typeData.type;
-                    if (typeData.color && bloodType.color == undefined)
+                    if (typeData.color && !bloodType.color)
                         bloodType.color = typeData.color;
-                    if (typeData.size && bloodType.size == undefined)
+                    if (typeData.size && !bloodType.size)
                         bloodType.size = typeData.size;
                 }
                 if (bloodType.type != undefined && bloodType.color != undefined && bloodType.size != undefined)
@@ -189,7 +184,7 @@ export class MonksBloodsplats {
         let folder = list.folder || `/modules/monks-bloodsplats/images/${list.id}`;
         let ext = list.ext || "webp";
         let filename = `${folder}/${index}.${ext}`
-        const tex = PIXI.Assets.cache.has(filename) ? getTexture(filename) : await loadTexture(filename);
+        const tex = PIXI.Assets.cache.has(filename) ? foundry.canvas.getTexture(filename) : await foundry.canvas.loadTexture(filename);
         if (!tex)
             return;
 
@@ -208,39 +203,6 @@ export class MonksBloodsplats {
         s.visible = token.isVisible;
 
         return s;
-    }
-
-    static async transferSettings() {
-        let setSetting = async function (name) {
-            let oldChange = game.settings.settings.get(`monks-bloodsplats.${name}`).onChange;
-            game.settings.settings.get(`monks-bloodsplats.${name}`).onChange = null;
-            await game.settings.set("monks-bloodsplats", name, game.settings.get("monks-little-details", name));
-            game.settings.settings.get(`monks-bloodsplats.${name}`).onChange = oldChange;
-        }
-        
-        await setSetting("bloodsplat-colour");
-        await setSetting("bloodsplat-size");
-        await setSetting("bloodsplat-opacity");
-        //await setSetting("treasure-chest");
-        //await setSetting("treasure-chest-size");
-
-        for (let scene of game.scenes) {
-            for (let token of scene.tokens) {
-                if (foundry.utils.getProperty(token, "flags.monks-little-details.bloodsplat-colour")) {
-                    await token.update({ "flags.monks-bloodsplats.bloodsplat-colour": foundry.utils.getProperty(token, "flags.monks-little-details.bloodsplat-colour") });
-                }
-            }
-        }
-
-        for (let actor of game.actors) {
-            if (foundry.utils.getProperty(actor.prototypeToken, "flags.monks-little-details.bloodsplat-colour")) {
-                await actor.prototypeToken.update({ "flags.monks-bloodsplats.bloodsplat-colour": foundry.utils.getProperty(actor.prototypeToken, "flags.monks-little-details.bloodsplat-colour") });
-            }
-        }
-
-        ui.notifications.warn("Monk's Bloodsplats has transfered over settings from Monk's Little Details, you will need to refresh your browser for some settings to take effect.", { permanent: true });
-
-        await game.settings.set("monks-bloodsplats", "transfer-settings", true);
     }
 
     static isDefeated(token) {
@@ -298,7 +260,7 @@ export class MonksBloodsplats {
                                 { parent: token.mesh, attribute: 'alpha', to: iconAlpha }
                             ];
 
-                            CanvasAnimation.animate(attributes, {
+                            foundry.canvas.animation.CanvasAnimation.animate(attributes, {
                                 name: "bloodsplatAnimation" + token.id,
                                 context: token,
                                 duration: 800
@@ -335,7 +297,7 @@ export class MonksBloodsplats {
                         { parent: token.mesh, attribute: 'alpha', to: alpha }
                     ];
 
-                    CanvasAnimation.animate(attributes, {
+                    foundry.canvas.animation.CanvasAnimation.animate(attributes, {
                         name: "bloodsplatAnimation" + token.id,
                         context: token,
                         duration: 800
@@ -429,34 +391,7 @@ export class MonksBloodsplats {
 }
 
 Hooks.once('init', MonksBloodsplats.init);
-Hooks.once('ready', MonksBloodsplats.ready);
 
-Hooks.on("renderSettingsConfig", (app, html, data) => {
-    //let colour = setting("bloodsplat-colour");
-    //$('<input>').attr('type', 'color').attr('data-edit', 'monks-bloodsplats.bloodsplat-colour').val(colour).insertAfter($('input[name="monks-bloodsplats.bloodsplat-colour"]', html).addClass('color'));
-
-    /*
-    let btn = $('<button>')
-        .addClass('file-picker')
-        .attr('type', 'button')
-        .attr('data-type', "imagevideo")
-        .attr('data-target', "img")
-        .attr('title', "Browse Files")
-        .attr('tabindex', "-1")
-        .html('<i class="fas fa-file-import fa-fw"></i>')
-        .click(function (event) {
-            const fp = new FilePicker({
-                type: "imagevideo",
-                current: $(event.currentTarget).prev().val(),
-                callback: path => {
-                    $(event.currentTarget).prev().val(path);
-                }
-            });
-            return fp.browse();
-        });
-    btn.clone(true).insertAfter($('input[name="monks-bloodsplats.treasure-chest"]', html).css({ 'flex-basis': 'unset', 'flex-grow': 1 }));
-    */
-});
 
 Hooks.on("updateSetting", (setting, data, options, userid) => {
     if (setting.key.startsWith("monks-bloodsplats")) {
@@ -620,8 +555,8 @@ Hooks.on("lightingRefresh", function () {
 
 Hooks.on("getSceneControlButtons", (controls) => {
     if (setting("disabled-bloodsplats")) {
-        let tokenControls = controls.find(control => control.name === "token")
-        tokenControls.tools.push({
+        let tokenControls = controls["tokens"];
+        tokenControls.tools["disabletoken"] = {
             name: "disabletoken",
             title: "MonksBloodsplats.DisableToken",
             icon: "fas fa-splotch",
@@ -642,6 +577,6 @@ Hooks.on("getSceneControlButtons", (controls) => {
                     }
                 });
             }
-        });
+        };
     }
 });

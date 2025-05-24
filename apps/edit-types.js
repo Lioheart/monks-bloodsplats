@@ -1,24 +1,42 @@
 import { MonksBloodsplats, log, error, i18n, setting } from "../monks-bloodsplats.js";
+const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api
 
-export class EditTypes extends FormApplication {
+export class EditTypes extends HandlebarsApplicationMixin(ApplicationV2) {
     constructor(object, options) {
         super(object, options);
     }
 
-    static get defaultOptions() {
-        return foundry.utils.mergeObject(super.defaultOptions, {
-            id: "bloodsplats-edit-types",
-            title: i18n("MonksBloodsplats.EditTypes"),
-            classes: ["edit-types"],
-            template: "./modules/monks-bloodsplats/templates/edit-types.html",
-            width: 600,
-            height: "auto",
+    static DEFAULT_OPTIONS = {
+        id: "bloodsplats-edit-types",
+        tag: "form",
+        classes: ["edit-types"],
+        window: {
+            contentClasses: ["standard-form"],
+            icon: "fa-solid fa-list",
+            resizable: false,
+            title: "MonksBloodsplats.EditTypes"
+        },
+        actions: {
+            reset: EditTypes.resetBloodTypes,
+        },
+        form: {
             closeOnSubmit: true,
-            popOut: true,
-        });
-    }
+            handler: EditTypes.onSubmitDocumentForm
+        },
+        position: {
+            width: 600
+        }
+    };
 
-    getData(options) {
+    static PARTS = {
+        main: {
+            root: true,
+            template: "modules/monks-bloodsplats/templates/edit-types.html",
+            scrollable: [".item-list"]
+        }
+    };
+
+    async _preparePartContext(partId, context, options) {
         let bloodOptions = setting("image-lists")
             .filter(i => i.count !== 0)
             .map(i => {
@@ -71,8 +89,8 @@ export class EditTypes extends FormApplication {
         };
     }
 
-    _updateObject(event, formData) {
-        let data = foundry.utils.expandObject(formData).types;
+    static async onSubmitDocumentForm(event, form, formData, options = {}) {
+        let data = foundry.utils.expandObject(formData.object).types;
         // remove any entires that have a blank type and blank color, remove either blank or color if it's blank
         Object.entries(data).forEach(([k, v]) => {
             if (v.type == "" && v.color == "" && k != "default") {
@@ -93,19 +111,26 @@ export class EditTypes extends FormApplication {
         MonksBloodsplats.blood_types = data;
     }
 
-    resetBloodTypes() {
+    static resetBloodTypes() {
+        /*
         game.settings.set('monks-bloodsplats', 'blood-types', {
             default: {
                 id: "blood"
             }
         });
         this.render(true);
+        */
+        $('select[name!="types.default.type"]', this.element).val("");
+        $('input', this.element).val("");
+        $('select[name="types.default.type"]', this.element).val("blood");
     }
 
-    activateListeners(html) {
-        super.activateListeners(html);
+    _onRender(context, options) {
+        super._onRender(context, options);
 
-        $('button[name="submit"]', html).click(this._onSubmit.bind(this));
-        $('button[name="reset"]', html).click(this.resetBloodTypes.bind(this));
+        let html = $(this.element);
+
+        //$('button[name="submit"]', html).click(this._onSubmit.bind(this));
+        //$('button[name="reset"]', html).click(this.resetBloodTypes.bind(this));
     };
 }

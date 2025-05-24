@@ -1,3 +1,9 @@
+# version 13.01
+
+v13 compatibility
+
+Removed code to transfer settings from Monks Little Details, I think it's been long enough.
+
 # version 12.01
 
 v12 compatibility

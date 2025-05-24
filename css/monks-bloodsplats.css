@@ -40,7 +40,7 @@
     align-items: center;
     background: rgba(0, 0, 0, 0.05);
     border: 2px groove rgb(238, 237, 224);
-    color: var(--color-text-dark-primary);
+    color: var(--color-text-secondary);
     font-weight: bold;
 }
 
@@ -118,6 +118,7 @@
     align-items: center;
     padding: 0 2px;
     border-bottom: 1px solid rgb(201, 199, 184);
+    margin-bottom: 0;
 }
 
 .monks-bloodsplats-edit-images .items-list .item:last-child {
@@ -150,12 +151,6 @@
 
 .monks-bloodsplats-edit-images .items-list.alternate-rows li:nth-child(even) {
     background-color: rgba(255, 255, 255, 0.3);
-}
-
-.monks-bloodsplats-edit-images .items-list .item input {
-    border-color: transparent;
-    color: rgb(25, 24, 19);
-    background-color: rgba(0, 0, 0, 0.05);
 }
 
 .monks-bloodsplats-edit-images .items-list .item input:hover {

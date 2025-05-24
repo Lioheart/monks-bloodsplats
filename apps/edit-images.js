@@ -1,26 +1,45 @@
 import { MonksBloodsplats, log, error, i18n, setting } from "../monks-bloodsplats.js";
+const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api
 
-export class EditImages extends FormApplication {
+export class EditImages extends HandlebarsApplicationMixin(ApplicationV2) {
     constructor(object, options) {
         super(object, options);
 
         this.imageLists = setting("image-lists");
     }
 
-    static get defaultOptions() {
-        return foundry.utils.mergeObject(super.defaultOptions, {
-            id: "bloodsplats-edit-images",
-            title: i18n("MonksBloodsplats.EditImages"),
-            classes: ["monks-bloodsplats-edit-images"],
-            template: "./modules/monks-bloodsplats/templates/edit-images.html",
-            width: 900,
-            height: "auto",
+    static DEFAULT_OPTIONS = {
+        id: "bloodsplats-edit-images",
+        tag: "form",
+        classes: ["monks-bloodsplats-edit-images"],
+        window: {
+            contentClasses: ["standard-form"],
+            icon: "fa-solid fa-image",
+            resizable: false,
+            title: "MonksBloodsplats.EditImages"
+        },
+        actions: {
+            reset: EditImages.resetList,
+        },
+        form: {
             closeOnSubmit: true,
-            popOut: true,
-        });
-    }
+            handler: EditImages.onSubmitDocumentForm
+        },
+        position: {
+            width: 900
+        }
+    };
 
-    getData(options) {
+    static PARTS = {
+        main: {
+            root: true,
+            template: "modules/monks-bloodsplats/templates/edit-images.html",
+            scrollable: [".item-list"]
+        }
+    };
+
+
+    async _preparePartContext(partId, context, options) {
         let imageLists = this.imageLists;
 
         imageLists = Object.values(imageLists).sort((a, b) => {
@@ -32,7 +51,7 @@ export class EditImages extends FormApplication {
         };
     }
 
-    _updateObject() {
+    static async onSubmitDocumentForm(event, form, formData, options = {}) {
         let data = this.imageLists.filter(c => !!c.id && !!c.name);
         game.settings.set('monks-bloodsplats', 'image-lists', data);
         MonksBloodsplats.image_list = data;
@@ -73,7 +92,7 @@ export class EditImages extends FormApplication {
         this.refresh();
     }
 
-    resetList() {
+    static resetList() {
         this.imageLists = game.settings.settings.get('monks-bloodsplats.image-lists').default;
         this.refresh();
     }
@@ -84,11 +103,13 @@ export class EditImages extends FormApplication {
         window.setTimeout(function () { that.setPosition(); }, 500);
     }
 
-    activateListeners(html) {
-        super.activateListeners(html);
+    _onRender(context, options) {
+        super._onRender(context, options);
 
-        $('button[name="submit"]', html).click(this._onSubmit.bind(this));
-        $('button[name="reset"]', html).click(this.resetList.bind(this));
+        let html = $(this.element);
+
+        //$('button[name="submit"]', html).click(this._onSubmit.bind(this));
+        //$('button[name="reset"]', html).click(this.resetList.bind(this));
 
         $('input[name]', html).change(this.changeData.bind(this));
 
